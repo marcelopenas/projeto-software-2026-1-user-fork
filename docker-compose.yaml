@@ -1,0 +1,47 @@
+services:
+  user:
+    image: "marcelopenas/projeto-software-user"
+    ports:
+      - "80:5001"
+    networks:
+      - network-user
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@database:5432/
+    depends_on:
+      - database-user
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/users"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  database-user:
+    image: "postgres:16"
+    ports:
+      - 5432:5432
+    networks:
+      - network-user
+    volumes:
+      - db-data-user:/var/lib/postgresql/data/
+      - ${PWD}/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+volumes:
+  db-data-user:
+
+networks:
+  network-user:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"

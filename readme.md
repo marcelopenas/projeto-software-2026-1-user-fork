@@ -73,6 +73,12 @@ docker push {nome_usuario_docker_hub}/app_users
 
 6 - Executar na máquina da AWS o `docker run`. Lembre que a porta 5000 está bloqueada na AWS, tente usar a porta 80 -> 80:5000
 
+## container
+
+docker build . --file Dockerfile --tag marcelopenas/projeto-software-user:latest --no-cache
+
+docker compose rm -f -v
+
 ## Exercício
 
 Na rota de cadastro de usuário, deve ser adicionado o campo CEP e número da cada, com o CEP, deve ser feita uma consulta na API:
