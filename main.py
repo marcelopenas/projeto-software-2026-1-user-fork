@@ -2,9 +2,11 @@ from flask import Flask, request, jsonify
 from db import db
 from models import User
 import os
+from flask_cors import CORS
 
 def create_app():
     app = Flask(__name__)
+    CORS(app)
     
     postgres_user = os.environ.get('POSTGRES_USER', 'appuser')
     postgres_password = os.environ.get('POSTGRES_PASSWORD', 'apppass')
@@ -39,6 +41,16 @@ def create_app():
     @app.route("/users/<uuid:user_id>", methods=["GET"])
     def get_user(user_id):
         user = User.query.get_or_404(user_id)
+
+        return jsonify({
+            "id": str(user.id),
+            "name": user.name,
+            "email": user.email
+        }), 200
+
+    @app.route("/users/<string:email>/email", methods=["GET"])
+    def get_user_by_email(email):
+        user = User.query.filter_by(email=email).first_or_404()
 
         return jsonify({
             "id": str(user.id),
