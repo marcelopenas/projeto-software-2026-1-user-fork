@@ -1,10 +1,61 @@
 import os
+from collections.abc import Callable
+from functools import wraps
+from typing import Any, ParamSpec, TypeVar, cast
 
 from flask import Flask, Response, jsonify, request
+from flask.typing import ResponseReturnValue
 from flask_cors import CORS
+from flask_jwt_extended import (
+    JWTManager,
+    get_jwt,
+    verify_jwt_in_request,
+)
 
 from db import db
 from models import User
+
+F = TypeVar("F", bound=Callable[..., Any])
+P = ParamSpec("P")
+T = TypeVar("T", bound=ResponseReturnValue)
+
+
+def admin_required() -> Callable[[F], F]:
+    def wrapper(fn: F) -> F:
+        @wraps(fn)
+        def decorator(*args: P.args, **kwargs: P.kwargs) -> T:
+            verify_jwt_in_request()
+            claims = get_jwt()
+            roles = claims.get("https://social-insper.com/roles", [])
+            if isinstance(roles, list) and "ADMIN" in roles:
+                return fn(*args, **kwargs)
+            return cast(
+                "T",
+                (jsonify(msg="Apenas ADMIN pode executar esta ação"), 403),
+            )
+
+        return cast("F", decorator)
+
+    return wrapper
+
+
+def user_required() -> Callable[[F], F]:
+    def wrapper(fn: F) -> F:
+        @wraps(fn)
+        def decorator(*args: P.args, **kwargs: P.kwargs) -> T:
+            verify_jwt_in_request()
+            claims = get_jwt()
+            roles = claims.get("https://social-insper.com/roles", [])
+            if isinstance(roles, list) and "USER" in roles:
+                return fn(*args, **kwargs)
+            return cast(
+                "T",
+                (jsonify(msg="Apenas USER pode executar esta ação"), 403),
+            )
+
+        return cast("F", decorator)
+
+    return wrapper
 
 
 def create_app() -> Flask:
@@ -23,9 +74,13 @@ def create_app() -> Flask:
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY")
+    JWTManager(app)
+
     db.init_app(app)
 
     @app.route("/users", methods=["POST"])
+    @admin_required()
     def create_user() -> tuple[Response, int]:
         data = request.json
 
@@ -39,6 +94,7 @@ def create_app() -> Flask:
         ), 201
 
     @app.route("/users/<uuid:user_id>", methods=["GET"])
+    @user_required()
     def get_user(user_id: int) -> tuple[Response, int]:
         user = User.query.get_or_404(user_id)
 
@@ -47,6 +103,7 @@ def create_app() -> Flask:
         ), 200
 
     @app.route("/users/<string:email>/email", methods=["GET"])
+    @user_required()
     def get_user_by_email(email: str) -> tuple[Response, int]:
         user = User.query.filter_by(email=email).first_or_404()
 
@@ -55,6 +112,7 @@ def create_app() -> Flask:
         ), 200
 
     @app.route("/users/<uuid:user_id>", methods=["DELETE"])
+    @admin_required()
     def delete_user(user_id: int) -> tuple[str, int]:
         user = User.query.get_or_404(user_id)
 
@@ -64,6 +122,7 @@ def create_app() -> Flask:
         return "", 204
 
     @app.route("/users", methods=["GET"])
+    @user_required()
     def list_users() -> tuple[list, int]:
         users = User.query.all()
 
