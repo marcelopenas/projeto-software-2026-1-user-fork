@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN apk add --no-cache python3 py3-pip
+RUN apk add --no-cache libpq
 
 RUN apk add --no-cache --virtual .build-deps \
     gcc \
