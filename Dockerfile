@@ -1,10 +1,21 @@
-FROM python:3.14
+FROM python:3.14-alpine
 
 WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apk add --no-cache python3 py3-pip
+
+RUN apk add --no-cache --virtual .build-deps \
+    gcc \
+    musl-dev \
+    postgresql-dev \
+    python3-dev \
+    libffi-dev \
+    && pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && apk del .build-deps
+
 COPY . .
 
 EXPOSE 5000
