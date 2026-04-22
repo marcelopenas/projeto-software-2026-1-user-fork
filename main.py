@@ -69,7 +69,8 @@ def create_app() -> Flask:
     postgres_user = os.environ.get("POSTGRES_USER", "appuser")
     postgres_password = os.environ.get("POSTGRES_PASSWORD", "apppass")
     postgres_url = os.environ.get("POSTGRES_URL", "localhost")
-    db_uri = f"postgresql://{postgres_user}:{postgres_password}@{postgres_url}:5432/users"
+    postgres_db = os.environ.get("POSTGRES_DB", "database")
+    db_uri = f"postgresql://{postgres_user}:{postgres_password}@{postgres_url}:5432/{postgres_db}"
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
         "SQLALCHEMY_DATABASE_URI", db_uri
     )
